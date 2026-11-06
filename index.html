@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poetry to Typography</title>
+    <style>
+      :root {
+        --bg: #f7f2ea;
+        --panel: #fffdf9;
+        --ink: #1a1a1a;
+        --muted: #615c56;
+        --accent: #7b4b3a;
+        --line: rgba(26, 26, 26, 0.08);
+        --font-family: Georgia, "Times New Roman", serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f9f2ea, #efe4d6);
+        color: var(--ink);
+        font-family: var(--font-family);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 32px 16px;
+      }
+
+      .app {
+        width: min(1500px, 100%);
+        background: rgba(255, 253, 249, 0.9);
+        border: 1px solid var(--line);
+        box-shadow: 0 16px 40px rgba(58, 40, 26, 0.12);
+        border-radius: 20px;
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 4vw, 3rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-family: var(--font-family);
+      }
+
+      .subtitle {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        font-family: var(--font-family);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.15fr 1fr;
+        gap: 22px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 360px;
+        resize: vertical;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        font-family: var(--font-family);
+        line-height: 1.8;
+        font-size: 1.05rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      .tertiary {
+        background: #efe2d5;
+        color: var(--ink);
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .primary {
+        background: var(--ink);
+        color: white;
+      }
+
+      .secondary {
+        background: #f0e0d3;
+        color: var(--ink);
+      }
+
+      .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .preview {
+        min-height: 360px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #f9f5f0;
+        padding: 20px;
+        white-space: pre-wrap;
+        font-family: var(--font-family);
+        font-size: clamp(1.2rem, 2vw, 2.1rem);
+        line-height: 1.7;
+        letter-spacing: normal;
+        text-transform: none;
+        word-break: break-word;
+      }
+
+      .preview .line {
+        display: block;
+        margin-bottom: 0.3em;
+      }
+
+      .preview .char {
+        display: inline-block;
+        vertical-align: baseline;
+      }
+
+      .preview .line.blank {
+        min-height: 1em;
+      }
+
+      @media (max-width: 760px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <h1>Typography</h1>
+      <p class="subtitle">Poetry to custom letterforms</p>
+
+      <div class="layout">
+        <section class="panel">
+          <textarea id="poemInput" aria-label="Poetry input" placeholder="Write your poem here..."></textarea>
+          <div class="controls">
+            <button class="primary" id="convertBtn" type="button">Convert</button>
+            <button class="tertiary" id="fontBtn" type="button">Next Font</button>
+            <button class="secondary" id="clearBtn" type="button">Clear</button>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="preview-header">
+            <span>Preview</span>
+            <span id="status">Saved</span>
+          </div>
+          <div id="preview" class="preview" aria-live="polite"></div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const COOKIE_NAME = "poetryTypography";
+      const textarea = document.getElementById("poemInput");
+      const preview = document.getElementById("preview");
+      const convertBtn = document.getElementById("convertBtn");
+      const fontBtn = document.getElementById("fontBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const status = document.getElementById("status");
+      const googleFonts = [
+        "Playfair Display",
+        "Libre Baskerville",
+        "Merriweather",
+        "Cormorant Garamond",
+        "Lora",
+        "EB Garamond",
+        "Cardo",
+        "Marcellus",
+        "Old Standard TT",
+        "Bree Serif",
+        "Fraunces",
+        "Cormorant"
+      ];
+      let currentFontIndex = 0;
+
+      function applyGoogleFont(fontFamily) {
+        const fontIndex = googleFonts.indexOf(fontFamily);
+        if (fontIndex !== -1) {
+          currentFontIndex = fontIndex;
+        }
+
+        const familyQuery = fontFamily.replace(/\s+/g, "+");
+        const existingLink = document.getElementById("google-font-link");
+
+        if (existingLink) {
+          existingLink.remove();
+        }
+
+        const link = document.createElement("link");
+        link.id = "google-font-link";
+        link.rel = "stylesheet";
+        link.href = `https://fonts.googleapis.com/css2?family=${familyQuery}:wght@400;500;600;700&display=swap`;
+        document.head.appendChild(link);
+
+        document.documentElement.style.setProperty("--font-family", `"${fontFamily}", serif`);
+      }
+
+      function applyRandomGoogleFont() {
+        const fontFamily = googleFonts[Math.floor(Math.random() * googleFonts.length)];
+        applyGoogleFont(fontFamily);
+      }
+
+      function cycleGoogleFont() {
+        currentFontIndex = (currentFontIndex + 1) % googleFonts.length;
+        applyGoogleFont(googleFonts[currentFontIndex]);
+        status.textContent = "Font changed";
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function randomFontSize() {
+        return Math.floor(Math.random() * 20) + 10;
+      }
+
+      function formatTypography(text) {
+        return text
+          .split(/\n/)
+          .map((line) => {
+            if (!line.trim()) {
+              return '<span class="line blank"></span>';
+            }
+
+            let currentSize = randomFontSize();
+
+            const chars = line
+              .split("")
+              .map((char) => {
+                if (char === " ") {
+                  currentSize = randomFontSize();
+                  return `<span class="char" style="font-size:${currentSize}pt;">&nbsp;</span>`;
+                }
+
+                return `<span class="char" style="font-size:${currentSize}pt;">${escapeHtml(char)}</span>`;
+              })
+              .join("");
+
+            return `<span class="line">${chars}</span>`;
+          })
+          .join("");
+      }
+
+      function updatePreview() {
+        const value = textarea.value.trim();
+        preview.innerHTML = value ? formatTypography(textarea.value) : "Your typographic poem will appear here.";
+      }
+
+      function saveToCookie(value) {
+        const encoded = encodeURIComponent(value);
+        document.cookie = `${COOKIE_NAME}=${encoded}; max-age=${60 * 60 * 24 * 365}; path=/`;
+        status.textContent = "Saved";
+      }
+
+      function loadFromCookie() {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
+        if (!match) {
+          return "";
+        }
+        return decodeURIComponent(match[1]);
+      }
+
+      textarea.addEventListener("input", () => {
+        const value = textarea.value;
+        saveToCookie(value);
+        updatePreview();
+      });
+
+      convertBtn.addEventListener("click", () => {
+        applyRandomGoogleFont();
+        saveToCookie(textarea.value);
+        updatePreview();
+        status.textContent = "Converted";
+      });
+
+      fontBtn.addEventListener("click", () => {
+        cycleGoogleFont();
+        saveToCookie(textarea.value);
+        updatePreview();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        textarea.value = "";
+        document.cookie = `${COOKIE_NAME}=; max-age=0; path=/`;
+        preview.innerHTML = "Your typographic poem will appear here.";
+        status.textContent = "Cleared";
+      });
+
+      applyGoogleFont(googleFonts[currentFontIndex]);
+      textarea.value = loadFromCookie();
+      updatePreview();
+    </script>
+  </body>
+</html>
